@@ -486,7 +486,7 @@ class Theo_000_BoltClientTests: TheoTestCase {
         let client = try makeClient()
         let exp = self.expectation(description: "testDeprecatedParameterSyntax")
 
-        try? client.executeCypher("MATCH (a:Person) WHERE a.name = {name} RETURN count(a) AS count", params: ["name": "Arthur"])  { result in
+        client.executeCypher("MATCH (a:Person) WHERE a.name = {name} RETURN count(a) AS count", params: ["name": "Arthur"])  { result in
             
             XCTAssertFalse(result.isSuccess)
             exp.fulfill()
@@ -1469,7 +1469,7 @@ class Theo_000_BoltClientTests: TheoTestCase {
                     
                     client.updateAndReturnRelationship(relationship: createdRelationship) { result in
                         XCTAssertTrue(result.isSuccess)
-                        var updatedRelationship = try! result.get()
+                        let updatedRelationship = try! result.get()
                         updatedRelationship["someProp"] = nil
                         
                         client.updateAndReturnRelationship(relationship: updatedRelationship) { result in

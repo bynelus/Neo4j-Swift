@@ -2,7 +2,7 @@ import Foundation
 import Bolt
 import PackStream
 
-public protocol ClientProtocol: class {
+public protocol ClientProtocol: AnyObject {
     func connect(completionBlock: ((Result<Bool, Error>) -> ())?)
     func connectSync() -> Result<Bool, Error>
     func disconnect()

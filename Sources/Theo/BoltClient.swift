@@ -147,34 +147,22 @@ open class BoltClient: ClientProtocol {
      */
     public func execute(request: Request, completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())? = nil) {
         
-        do {
-            guard let promise = try connection.request(request) else {
-                completionBlock?(.failure(BoltClientError.unknownError))
-                return
-            }
+        let promise = connection.request(request)
 
-            promise.whenSuccess { responses in
-                #if THEO_DEBUG
-                print("execute -> success")
-                #endif
-                let queryResponse = self.parseResponses(responses: responses)
-                completionBlock?(.success((true, queryResponse)))
-            }
-            
-            promise.whenFailure { error in
-                #if THEO_DEBUG
-                print("execute -> failure")
-                #endif
-                completionBlock?(.failure((error)))
-            }
-            
-
-        } catch let error as Response.ResponseError {
-            completionBlock?(.failure(error))
-        } catch let error {
-            print("Unhandled error while executing cypher: \(error.localizedDescription)")
+        promise.whenSuccess { responses in
+            #if THEO_DEBUG
+            print("execute -> success")
+            #endif
+            let queryResponse = self.parseResponses(responses: responses)
+            completionBlock?(.success((true, queryResponse)))
         }
         
+        promise.whenFailure { error in
+            #if THEO_DEBUG
+            print("execute -> failure")
+            #endif
+            completionBlock?(.failure((error)))
+        }
     }
 
     /**
@@ -210,35 +198,26 @@ open class BoltClient: ClientProtocol {
      - parameter completionBlock: Completion result-block that provides a complete QueryResult, or an Error to explain what went wrong
      */
     public func executeWithResult(request: Request, completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())? = nil) {
-        do {
-            guard let promise = try connection.request(request) else {
-                completionBlock?(.failure(BoltClientError.unknownError))
-                return
-            }
-            
-            promise.whenSuccess{ responses in
-                let queryResponse = self.parseResponses(responses: responses)
-                self.pullAll(partialQueryResult: queryResponse) { result in
-                    switch result {
-                    case let .failure(error):
-                        completionBlock?(.failure(error))
-                    case let .success((successResponse, queryResponse)):
-                        if successResponse == false {
-                            completionBlock?(.failure(BoltClientError.queryUnsuccessful))
-                        } else {
-                            completionBlock?(.success((successResponse, queryResponse)))
-                        }
+        let promise = connection.request(request)
+        
+        promise.whenSuccess{ responses in
+            let queryResponse = self.parseResponses(responses: responses)
+            self.pullAll(partialQueryResult: queryResponse) { result in
+                switch result {
+                case let .failure(error):
+                    completionBlock?(.failure(error))
+                case let .success((successResponse, queryResponse)):
+                    if successResponse == false {
+                        completionBlock?(.failure(BoltClientError.queryUnsuccessful))
+                    } else {
+                        completionBlock?(.success((successResponse, queryResponse)))
                     }
                 }
             }
-            
-            promise.whenFailure { (error) in
-                completionBlock?(.failure(BoltClientError.queryUnsuccessful))
-            }
-        } catch let error as Response.ResponseError {
-            completionBlock?(.failure(error))
-        } catch let error {
-            print("Unhandled error while executing cypher: \(error.localizedDescription)")
+        }
+        
+        promise.whenFailure { (error) in
+            completionBlock?(.failure(BoltClientError.queryUnsuccessful))
         }
     }
 
@@ -330,7 +309,7 @@ open class BoltClient: ClientProtocol {
                 case let .failure(error):
                     print("Error: \(error)")
                     theResult = .failure(error)
-                case let .success(isSuccess, parsedResponses):
+                case let .success((isSuccess, parsedResponses)):
                     if isSuccess == false {
                         let error = BoltClientError.queryUnsuccessful
                         theResult = .failure(error)
@@ -490,11 +469,7 @@ open class BoltClient: ClientProtocol {
                 // self.pullSynchronouslyAndIgnore()
 
                 let commitRequest = BoltRequest.commit()
-                guard let promise = try self.connection.request(commitRequest) else {
-                    let error = BoltClientError.unknownError
-                    throw error
-                    // return
-                }
+                let promise = self.connection.request(commitRequest)
 
                 promise.whenSuccess { responses in
                     self.currentTransaction = nil
@@ -510,11 +485,7 @@ open class BoltClient: ClientProtocol {
             } else {
 
                 let rollbackRequest = BoltRequest.rollback()
-                guard let promise = try self.connection.request(rollbackRequest) else {
-                    let error = BoltClientError.unknownError
-                    throw error
-                    // return
-                }
+                let promise = self.connection.request(rollbackRequest)
                 
                 promise.whenSuccess { responses in
                     self.currentTransaction = nil
@@ -536,11 +507,7 @@ open class BoltClient: ClientProtocol {
         currentTransaction = transaction
 
         let beginRequest = BoltRequest.begin(mode: mode)
-        guard let promise = try self.connection.request(beginRequest) else {
-            let error = BoltClientError.unknownError
-            throw error
-            // return
-        }
+        let promise = self.connection.request(beginRequest)
 
         promise.whenSuccess { responses in
             
@@ -564,10 +531,7 @@ open class BoltClient: ClientProtocol {
     
     public func reset(completionBlock: (() -> ())?) throws {
         let req = BoltRequest.reset()
-        guard let promise = try self.connection.request(req) else {
-            let error = BoltClientError.unknownError
-            throw error
-        }
+        let promise = self.connection.request(req)
         
         promise.whenSuccess { responses in
             if(responses.first?.category != .success) {
@@ -594,11 +558,7 @@ open class BoltClient: ClientProtocol {
     
     public func rollback(transaction: Transaction, rollbackCompleteBlock: (() -> ())?) throws {
         let rollbackRequest = BoltRequest.rollback()
-        guard let promise = try self.connection.request(rollbackRequest) else {
-            let error = BoltClientError.unknownError
-            throw error
-            // return
-        }
+        let promise = self.connection.request(rollbackRequest)
         
         promise.whenSuccess { responses in
             self.currentTransaction = nil
@@ -622,12 +582,7 @@ open class BoltClient: ClientProtocol {
         dispatchGroup.enter()
         let q = DispatchQueue(label: "pullSynchronouslyAndIgnore")
         q.async {
-            guard let promise = try? self.connection.request(pullRequest) else {
-                // let error = BoltClientError.unknownError
-                // throw error
-                dispatchGroup.leave()
-                return
-            }
+            let promise = self.connection.request(pullRequest)
 
             #if THEO_DEBUG
             print("Incoming promise: \(String(describing: promise))")
@@ -683,11 +638,7 @@ open class BoltClient: ClientProtocol {
     public func pullAll(partialQueryResult: QueryResult = QueryResult(), completionBlock: ((Result<(Bool, QueryResult), Error>) -> ())? = nil) {
         
         let pullRequest = BoltRequest.pullAll()
-        guard let promise = try? self.connection.request(pullRequest) else {
-            // let error = BoltClientError.unknownError
-            // throw error
-            return
-        }
+        let promise = self.connection.request(pullRequest)
 
         promise.whenSuccess { responses in
 

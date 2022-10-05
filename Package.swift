@@ -1,23 +1,25 @@
-// swift-tools-version:5.2
+// swift-tools-version:5.5
 import PackageDescription
 
 let package = Package(
     name: "Theo",
     platforms: [
         .macOS(.v10_14),
-        .iOS(.v12),
+        .iOS(.v13),
         .tvOS(.v12)
     ],
     products: [
         .library(name: "Theo", targets: ["Theo"])
     ],
     dependencies: [
-        .package(name: "Bolt", url: "https://github.com/Neo4j-Swift/Bolt-swift.git", from: "5.2.0")
+      .package(url: "https://github.com/bynelus/Bolt-swift.git", branch: "dev/5.2.1")
     ],
     targets: [
         .target(
             name: "Theo",
-            dependencies: ["Bolt"]),
+            dependencies: [
+              .product(name: "Bolt", package: "Bolt-swift"),
+            ]),
         .testTarget(
             name: "TheoTests",
             dependencies: ["Theo"])
