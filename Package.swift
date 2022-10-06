@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "Theo",
     platforms: [
-        .macOS(.v10_14),
+        .macOS(.v12),
         .iOS(.v13),
         .tvOS(.v12)
     ],
